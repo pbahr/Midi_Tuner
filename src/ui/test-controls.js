@@ -1,8 +1,5 @@
-export function setupTestControls({ onEnableMidi, onClearEvents }) {
+export function setupTestControls({ onEnableMidi }) {
   document
     .querySelector("#enable-midi")
     .addEventListener("click", onEnableMidi);
-  document
-    .querySelector("#clear-events")
-    .addEventListener("click", onClearEvents);
 }

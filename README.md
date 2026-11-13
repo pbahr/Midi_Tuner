@@ -11,13 +11,13 @@ midi-tuner/
 │   ├── main.js             # App entry point; connects MIDI, UI, and controls
 │   ├── styles.css          # App layout and visual styles
 │   ├── midi/
-│   │   ├── midi-client.js  # Enables WebMidi.js and listens for note-on events
-│   │   ├── midi-events.js  # Formats MIDI note events for display
+│   │   ├── active-notes.js # Tracks held notes and clears disconnected inputs
+│   │   ├── midi-client.js  # Enables WebMidi.js and listens for note events
 │   │   └── midi-utils.js   # Small MIDI utility functions
 │   └── ui/
 │       ├── device-list.js  # Renders detected MIDI input/output devices
-│       ├── event-log.js    # Adds and clears incoming note events
-│       └── test-controls.js  # Wires the enable and clear buttons
+│       ├── piano.js        # Builds the 88-key piano and highlights held notes
+│       └── test-controls.js # Wires the MIDI enable button
 ├── tests/
 │   └── midi-utils.test.js  # Unit tests for MIDI utility functions
 ├── index.html              # Page markup and app mount point
@@ -75,10 +75,12 @@ npm run start
 ## MIDI access
 
 Select **Enable MIDI** in the page and grant browser permission if prompted.
-Connect a MIDI input and play a note to see it in the incoming event log. MIDI
-access requires a supported browser and a secure context; `localhost` and
-`127.0.0.1` are suitable for local development. The current starter app lists
-devices and logs incoming note-on events; it does not yet send MIDI output.
+Connect a MIDI input and play or release notes to see the corresponding keys
+light up or turn off on the 88-key A0–C8 piano. MIDI access requires a
+supported browser and a secure context; `localhost` and `127.0.0.1` are
+suitable for local development. Notes remain lit until their matching note-off
+arrives; if an input disconnects while a note is held, its keys are cleared.
+The current app displays incoming MIDI notes; it does not yet send MIDI output.
 
 ## Build process
 

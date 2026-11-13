@@ -36,16 +36,22 @@
         </div>
       </section>
 
-      <section class="panel" aria-labelledby="events-heading">
+      <section class="panel piano-panel" aria-labelledby="piano-heading">
         <div class="panel-heading">
-          <h2 id="events-heading">Incoming notes</h2>
-          <button id="clear-events" class="secondary-button" type="button">
-            Clear
-          </button>
+          <div>
+            <h2 id="piano-heading">88-key piano</h2>
+            <p class="piano-hint">Play and release notes to see the keys light up.</p>
+          </div>
+          <span class="piano-range">A0–C8</span>
         </div>
-        <ol id="event-log" class="event-log" aria-live="polite">
-          <li class="empty-state">Play a note on a connected MIDI device.</li>
-        </ol>
+        <div class="piano-scroll">
+          <div
+            id="piano-keyboard"
+            class="piano-keyboard"
+            role="img"
+            aria-label="88-key piano. No keys are currently active."
+          ></div>
+        </div>
       </section>
     </main>
 
