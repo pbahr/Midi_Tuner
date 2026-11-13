@@ -15,7 +15,8 @@ midi-tuner/
 │   ├── midi/
 │   │   ├── active-notes.js # Tracks held notes and clears disconnected inputs
 │   │   ├── midi-client.js  # Enables WebMidi.js and listens for note events
-│   │   └── midi-utils.js   # Small MIDI utility functions
+│   │   ├── midi-utils.js   # Small MIDI utility functions
+│   │   └── pitch-offsets.js # Cycles per-key tuning offsets
 │   └── ui/
 │       ├── device-list.js  # Renders detected MIDI input/output devices
 │       ├── piano.js        # Builds the 88-key piano and highlights held notes
@@ -90,6 +91,10 @@ active until the matching note-off arrives; disconnecting an input releases
 its held notes. MIDI access requires a supported browser and a secure context;
 `localhost` and `127.0.0.1` are suitable for local development. The app
 currently displays and plays incoming MIDI notes; it does not send MIDI output.
+
+Click any piano key to cycle its tuning mode: normal, **+50 cents** (blue),
+then **−50 cents** (amber), then back to normal. The selected offset is applied
+to incoming notes at that pitch, including a note that is already sounding.
 
 ## Build process
 

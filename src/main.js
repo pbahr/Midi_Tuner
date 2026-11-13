@@ -13,6 +13,7 @@ const pianoSound = createPianoSound();
 const piano = createPiano(document.querySelector("#piano-keyboard"), {
   onNoteOn: pianoSound.noteOn,
   onNoteOff: pianoSound.noteOff,
+  onPitchOffsetChange: pianoSound.setPitchOffset,
 });
 let midiDevices = null;
 

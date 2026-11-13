@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createActiveNotes } from "../src/midi/active-notes.js";
 import { clampMidiValue } from "../src/midi/midi-utils.js";
+import { nextPitchOffset } from "../src/midi/pitch-offsets.js";
 import { PIANO_NOTE_NUMBERS } from "../src/ui/piano.js";
 
 test("clampMidiValue rounds and clamps values to the MIDI range", () => {
@@ -14,6 +15,12 @@ test("piano covers the standard 88-key range from A0 through C8", () => {
   assert.equal(PIANO_NOTE_NUMBERS.length, 88);
   assert.equal(PIANO_NOTE_NUMBERS[0], 21);
   assert.equal(PIANO_NOTE_NUMBERS.at(-1), 108);
+});
+
+test("pitch offset mode cycles from normal to up, down, and normal", () => {
+  assert.equal(nextPitchOffset(0), 50);
+  assert.equal(nextPitchOffset(50), -50);
+  assert.equal(nextPitchOffset(-50), 0);
 });
 
 test("active notes remain lit until every source releases the same pitch", () => {

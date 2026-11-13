@@ -7,12 +7,13 @@ export function createPianoSound() {
   const heldNotes = new Map();
   const playingNotes = new Map();
 
-  function startHeldNote(midi, velocity) {
+  function startHeldNote(midi, { velocity, pitchOffset }) {
     if (!instrument || playingNotes.has(midi)) return;
 
     const node = instrument.play(midi, audioContext.currentTime, {
       gain: velocity,
       release: 0.35,
+      cents: pitchOffset,
     });
     playingNotes.set(midi, node);
     node.source.addEventListener("ended", () => {
@@ -44,8 +45,8 @@ export function createPianoSound() {
         .then(([, loadedInstrument]) => {
           instrument = loadedInstrument;
 
-          for (const [midi, velocity] of heldNotes) {
-            startHeldNote(midi, velocity);
+          for (const [midi, note] of heldNotes) {
+            startHeldNote(midi, note);
           }
         })
         .catch((error) => {
@@ -56,9 +57,26 @@ export function createPianoSound() {
       return loading;
     },
 
-    noteOn(midi, velocity) {
-      heldNotes.set(midi, velocity);
-      startHeldNote(midi, velocity);
+    noteOn(midi, velocity, pitchOffset) {
+      const note = { velocity, pitchOffset };
+      heldNotes.set(midi, note);
+      startHeldNote(midi, note);
+    },
+
+    setPitchOffset(midi, pitchOffset) {
+      const note = heldNotes.get(midi);
+      if (!note) return;
+
+      note.pitchOffset = pitchOffset;
+      const playingNote = playingNotes.get(midi);
+      if (playingNote) {
+        const playbackRate = 2 ** (pitchOffset / 1200);
+        playingNote.source.playbackRate.setTargetAtTime(
+          playbackRate,
+          audioContext.currentTime,
+          0.02,
+        );
+      }
     },
 
     noteOff(midi) {

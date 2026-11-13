@@ -1,4 +1,5 @@
 import { createActiveNotes } from "../midi/active-notes.js";
+import { nextPitchOffset } from "../midi/pitch-offsets.js";
 
 const firstNote = 21;
 const lastNote = 108;
@@ -17,11 +18,15 @@ function getNoteName(noteNumber) {
 }
 
 function createKey(noteNumber, isBlack, whiteIndex) {
-  const key = document.createElement("div");
+  const key = document.createElement("button");
   const name = getNoteName(noteNumber);
+  key.type = "button";
   key.className = `piano-key ${isBlack ? "piano-key--black" : "piano-key--white"}`;
   key.dataset.noteNumber = String(noteNumber);
-  key.title = name;
+  key.dataset.pitchOffset = "0";
+  key.title = `${name}: normal tuning`;
+  key.setAttribute("aria-label", `${name}, normal tuning`);
+  key.setAttribute("aria-pressed", "false");
 
   if (isBlack) {
     key.style.left = `${(whiteIndex / whiteKeyCount) * 100}%`;
@@ -38,9 +43,17 @@ function createKey(noteNumber, isBlack, whiteIndex) {
   return key;
 }
 
-export function createPiano(container, { onNoteOn = () => {}, onNoteOff = () => {} } = {}) {
+export function createPiano(
+  container,
+  {
+    onNoteOn = () => {},
+    onNoteOff = () => {},
+    onPitchOffsetChange = () => {},
+  } = {},
+) {
   const keys = new Map();
   const activeNotes = new Set();
+  const pitchOffsets = new Map();
   const fragment = document.createDocumentFragment();
   let whiteIndex = 0;
 
@@ -48,6 +61,25 @@ export function createPiano(container, { onNoteOn = () => {}, onNoteOff = () => 
     const isWhite = whitePitchClasses.has(noteNumber % 12);
     const key = createKey(noteNumber, !isWhite, whiteIndex);
     keys.set(noteNumber, key);
+    pitchOffsets.set(noteNumber, 0);
+    key.addEventListener("click", () => {
+      const pitchOffset = nextPitchOffset(pitchOffsets.get(noteNumber));
+      pitchOffsets.set(noteNumber, pitchOffset);
+      key.dataset.pitchOffset = String(pitchOffset);
+      key.classList.toggle("piano-key--tuned-up", pitchOffset > 0);
+      key.classList.toggle("piano-key--tuned-down", pitchOffset < 0);
+
+      const modeLabel =
+        pitchOffset > 0
+          ? "pitch up 50 cents"
+          : pitchOffset < 0
+            ? "pitch down 50 cents"
+            : "normal tuning";
+      key.title = `${getNoteName(noteNumber)}: ${modeLabel}`;
+      key.setAttribute("aria-label", `${getNoteName(noteNumber)}, ${modeLabel}`);
+      key.setAttribute("aria-pressed", String(pitchOffset !== 0));
+      onPitchOffsetChange(noteNumber, pitchOffset);
+    });
 
     fragment.append(key);
     if (isWhite) {
@@ -69,7 +101,7 @@ export function createPiano(container, { onNoteOn = () => {}, onNoteOff = () => 
     }
 
     if (isActive) {
-      onNoteOn(noteNumber, velocity);
+      onNoteOn(noteNumber, velocity, pitchOffsets.get(noteNumber));
     } else {
       onNoteOff(noteNumber);
     }
@@ -98,5 +130,8 @@ export function createPiano(container, { onNoteOn = () => {}, onNoteOff = () => 
       tracker.clearSource(source);
     },
     clear: tracker.clear,
+    getPitchOffset(noteNumber) {
+      return pitchOffsets.get(noteNumber) ?? 0;
+    },
   };
 }
