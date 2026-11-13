@@ -9,6 +9,7 @@ export async function enableMidi({ onNoteOn, onNoteOff, onInputDisconnected }) {
         noteNumber: event.note.number,
         source: input.id,
         channel: event.channel,
+        velocity: event.velocity,
       });
     };
 

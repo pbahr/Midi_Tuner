@@ -10,6 +10,8 @@ midi-tuner/
 ├── src/
 │   ├── main.js             # App entry point; connects MIDI, UI, and controls
 │   ├── styles.css          # App layout and visual styles
+│   ├── audio/
+│   │   └── piano-sound.js  # Loads and plays sampled grand piano soundfont
 │   ├── midi/
 │   │   ├── active-notes.js # Tracks held notes and clears disconnected inputs
 │   │   ├── midi-client.js  # Enables WebMidi.js and listens for note events
@@ -74,13 +76,20 @@ npm run start
 
 ## MIDI access
 
-Select **Enable MIDI** in the page and grant browser permission if prompted.
-Connect a MIDI input and play or release notes to see the corresponding keys
-light up or turn off on the 88-key A0–C8 piano. MIDI access requires a
-supported browser and a secure context; `localhost` and `127.0.0.1` are
-suitable for local development. Notes remain lit until their matching note-off
-arrives; if an input disconnects while a note is held, its keys are cleared.
-The current app displays incoming MIDI notes; it does not yet send MIDI output.
+Select **Enable MIDI & Piano Audio** in the page and grant browser permission
+if prompted. The app loads an acoustic grand piano sample set from the
+MusyngKite soundfont using `soundfont-player`. The samples are fetched from an
+external host when audio is enabled, so internet access is needed unless the
+browser has them cached. The first load can take a little while; the page
+reports whether MIDI and audio are ready or need to be retried.
+
+Connect a MIDI input and play or release notes to light up the matching keys on
+the 88-key A0–C8 piano and hear them through the computer's audio output.
+Incoming note velocity controls playback volume. A key and its sound stay
+active until the matching note-off arrives; disconnecting an input releases
+its held notes. MIDI access requires a supported browser and a secure context;
+`localhost` and `127.0.0.1` are suitable for local development. The app
+currently displays and plays incoming MIDI notes; it does not send MIDI output.
 
 ## Build process
 
@@ -97,6 +106,8 @@ resolved versions recorded in `package-lock.json`). The build command runs
 from `src/`, bundles and optimizes the app, and writes the deployable static
 files to `dist/`. Vite clears and recreates that output folder during a build;
 do not make source edits directly in `dist/`.
+The soundfont audio files are fetched by the browser at runtime; they are not
+included in `dist/`.
 
 To check the production build locally, run:
 

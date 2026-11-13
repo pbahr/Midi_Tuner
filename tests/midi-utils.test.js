@@ -27,7 +27,6 @@ test("active notes remain lit until every source releases the same pitch", () =>
   notes.noteOff(60, "keyboard-a", 1);
   assert.deepEqual(changes, [
     [60, true],
-    [60, true],
   ]);
 
   notes.noteOff(60, "keyboard-b", 1);
@@ -49,6 +48,18 @@ test("duplicate note-on and unmatched note-off events do not corrupt held state"
     [64, true],
     [64, false],
   ]);
+});
+
+test("first active note forwards its MIDI velocity to the sound callback", () => {
+  const changes = [];
+  const notes = createActiveNotes((...change) => {
+    changes.push(change);
+  });
+
+  notes.noteOn(69, "keyboard-a", 1, 0.72);
+  notes.noteOn(69, "keyboard-b", 1, 0.3);
+
+  assert.deepEqual(changes, [[69, true, 0.72]]);
 });
 
 test("clear deactivates every held pitch", () => {

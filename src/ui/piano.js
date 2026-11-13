@@ -38,7 +38,7 @@ function createKey(noteNumber, isBlack, whiteIndex) {
   return key;
 }
 
-export function createPiano(container) {
+export function createPiano(container, { onNoteOn = () => {}, onNoteOff = () => {} } = {}) {
   const keys = new Map();
   const activeNotes = new Set();
   const fragment = document.createDocumentFragment();
@@ -57,7 +57,7 @@ export function createPiano(container) {
 
   container.replaceChildren(fragment);
 
-  function setNoteActive(noteNumber, isActive) {
+  function setNoteActive(noteNumber, isActive, velocity) {
     const key = keys.get(noteNumber);
     if (!key) return;
 
@@ -66,6 +66,12 @@ export function createPiano(container) {
       activeNotes.add(noteNumber);
     } else {
       activeNotes.delete(noteNumber);
+    }
+
+    if (isActive) {
+      onNoteOn(noteNumber, velocity);
+    } else {
+      onNoteOff(noteNumber);
     }
 
     const activeNames = [...activeNotes]
@@ -82,8 +88,8 @@ export function createPiano(container) {
   const tracker = createActiveNotes(setNoteActive);
 
   return {
-    noteOn({ noteNumber, source, channel }) {
-      tracker.noteOn(noteNumber, source, channel);
+    noteOn({ noteNumber, source, channel, velocity }) {
+      tracker.noteOn(noteNumber, source, channel, velocity);
     },
     noteOff({ noteNumber, source, channel }) {
       tracker.noteOff(noteNumber, source, channel);

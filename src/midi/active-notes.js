@@ -18,13 +18,14 @@ export function createActiveNotes(onChange) {
   }
 
   return {
-    noteOn(noteNumber, source, channel) {
+    noteOn(noteNumber, source, channel, velocity = 1) {
       const noteId = getNoteId(noteNumber, source, channel);
       if (heldNotes.has(noteId)) return;
 
+      const wasActive = noteCounts.has(noteNumber);
       heldNotes.set(noteId, { noteNumber, source });
       noteCounts.set(noteNumber, (noteCounts.get(noteNumber) ?? 0) + 1);
-      onChange(noteNumber, true);
+      if (!wasActive) onChange(noteNumber, true, velocity);
     },
 
     noteOff(noteNumber, source, channel) {
