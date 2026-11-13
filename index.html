@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#111827" />
+    <title>MIDI Tuner</title>
+  </head>
+  <body>
+    <main class="app">
+      <header class="app-header">
+        <div>
+          <p class="eyebrow">MIDI tools</p>
+          <h1>MIDI Tuner</h1>
+        </div>
+        <button id="enable-midi" type="button">Enable MIDI</button>
+      </header>
+
+      <p id="status" class="status" role="status">MIDI is not enabled.</p>
+
+      <section class="panel" aria-labelledby="devices-heading">
+        <h2 id="devices-heading">Devices</h2>
+        <div class="device-columns">
+          <div>
+            <h3>Inputs</h3>
+            <ul id="input-devices" class="device-list">
+              <li class="empty-state">No inputs found.</li>
+            </ul>
+          </div>
+          <div>
+            <h3>Outputs</h3>
+            <ul id="output-devices" class="device-list">
+              <li class="empty-state">No outputs found.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="events-heading">
+        <div class="panel-heading">
+          <h2 id="events-heading">Incoming notes</h2>
+          <button id="clear-events" class="secondary-button" type="button">
+            Clear
+          </button>
+        </div>
+        <ol id="event-log" class="event-log" aria-live="polite">
+          <li class="empty-state">Play a note on a connected MIDI device.</li>
+        </ol>
+      </section>
+    </main>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
