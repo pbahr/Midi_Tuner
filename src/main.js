@@ -6,6 +6,7 @@ import { createPiano } from "./ui/piano.js";
 import { setupTestControls } from "./ui/test-controls.js";
 
 const status = document.querySelector("#status");
+const sustainIndicator = document.querySelector("#sustain-indicator");
 const inputDevices = document.querySelector("#input-devices");
 const outputDevices = document.querySelector("#output-devices");
 const enableButton = document.querySelector("#enable-midi");
@@ -14,6 +15,12 @@ const piano = createPiano(document.querySelector("#piano-keyboard"), {
   onNoteOn: pianoSound.noteOn,
   onNoteOff: pianoSound.noteOff,
   onPitchOffsetChange: pianoSound.setPitchOffset,
+  onSustainChange: (source, channel, isDown, anyPedalDown) => {
+    pianoSound.setSustain(source, channel, isDown);
+    sustainIndicator.textContent = anyPedalDown ? "Sustain on" : "Sustain off";
+    sustainIndicator.classList.toggle("is-active", anyPedalDown);
+    sustainIndicator.setAttribute("aria-label", `Sustain pedal ${anyPedalDown ? "on" : "off"}`);
+  },
 });
 let midiDevices = null;
 
@@ -28,6 +35,7 @@ setupTestControls({
       : enableMidi({
           onNoteOn: piano.noteOn,
           onNoteOff: piano.noteOff,
+          onSustainChange: piano.sustainChange,
           onInputDisconnected: piano.clearSource,
         });
     const audioPromise = pianoSound.enable();

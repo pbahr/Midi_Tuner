@@ -1,5 +1,6 @@
 import { createActiveNotes } from "../midi/active-notes.js";
 import { nextPitchOffset } from "../midi/pitch-offsets.js";
+import { createSustainPedalState } from "../midi/sustain-pedal.js";
 
 const firstNote = 21;
 const lastNote = 108;
@@ -49,6 +50,7 @@ export function createPiano(
     onNoteOn = () => {},
     onNoteOff = () => {},
     onPitchOffsetChange = () => {},
+    onSustainChange = () => {},
   } = {},
 ) {
   const keys = new Map();
@@ -89,7 +91,7 @@ export function createPiano(
 
   container.replaceChildren(fragment);
 
-  function setNoteActive(noteNumber, isActive, velocity) {
+  function setNoteActive(noteNumber, isActive) {
     const key = keys.get(noteNumber);
     if (!key) return;
 
@@ -98,12 +100,6 @@ export function createPiano(
       activeNotes.add(noteNumber);
     } else {
       activeNotes.delete(noteNumber);
-    }
-
-    if (isActive) {
-      onNoteOn(noteNumber, velocity, pitchOffsets.get(noteNumber));
-    } else {
-      onNoteOff(noteNumber);
     }
 
     const activeNames = [...activeNotes]
@@ -117,7 +113,23 @@ export function createPiano(
     );
   }
 
-  const tracker = createActiveNotes(setNoteActive);
+  const tracker = createActiveNotes(setNoteActive, {
+    onNoteOn: (noteNumber, source, channel, velocity) => {
+      onNoteOn(
+        noteNumber,
+        velocity,
+        pitchOffsets.get(noteNumber),
+        source,
+        channel,
+      );
+    },
+    onNoteOff,
+  });
+  const sustainPedals = createSustainPedalState(
+    (source, channel, isDown, anyPedalDown) => {
+      onSustainChange(source, channel, isDown, anyPedalDown);
+    },
+  );
 
   return {
     noteOn({ noteNumber, source, channel, velocity }) {
@@ -128,6 +140,10 @@ export function createPiano(
     },
     clearSource(source) {
       tracker.clearSource(source);
+      sustainPedals.clearSource(source);
+    },
+    sustainChange({ source, channel, isDown }) {
+      sustainPedals.set(source, channel, isDown);
     },
     clear: tracker.clear,
     getPitchOffset(noteNumber) {

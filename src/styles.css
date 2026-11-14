@@ -133,6 +133,27 @@ h3 {
   white-space: nowrap;
 }
 
+.piano-indicators {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.sustain-indicator {
+  border: 1px solid #4b5563;
+  border-radius: 999px;
+  padding: 0.3rem 0.65rem;
+  color: #9ca3af;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.sustain-indicator.is-active {
+  border-color: #34d399;
+  color: #a7f3d0;
+  background: #064e3b;
+}
+
 .piano-scroll {
   overflow: hidden;
   padding: 0.75rem 0 0.25rem;

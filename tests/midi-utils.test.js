@@ -3,6 +3,11 @@ import test from "node:test";
 import { createActiveNotes } from "../src/midi/active-notes.js";
 import { clampMidiValue } from "../src/midi/midi-utils.js";
 import { nextPitchOffset } from "../src/midi/pitch-offsets.js";
+import {
+  createSustainPedalState,
+  isSustainPedalDown,
+  SUSTAIN_PEDAL_CONTROLLER,
+} from "../src/midi/sustain-pedal.js";
 import { PIANO_NOTE_NUMBERS } from "../src/ui/piano.js";
 
 test("clampMidiValue rounds and clamps values to the MIDI range", () => {
@@ -21,6 +26,30 @@ test("pitch offset mode cycles from normal to up, down, and normal", () => {
   assert.equal(nextPitchOffset(0), 50);
   assert.equal(nextPitchOffset(50), -50);
   assert.equal(nextPitchOffset(-50), 0);
+});
+
+test("sustain pedal uses MIDI controller 64 and the standard half-value threshold", () => {
+  assert.equal(SUSTAIN_PEDAL_CONTROLLER, 64);
+  assert.equal(isSustainPedalDown(63), false);
+  assert.equal(isSustainPedalDown(64), true);
+});
+
+test("sustain pedal state is tracked per source and channel", () => {
+  const changes = [];
+  const pedal = createSustainPedalState((...change) => changes.push(change));
+
+  pedal.set("keyboard-a", 1, true);
+  pedal.set("keyboard-a", 1, true);
+  pedal.set("keyboard-b", 1, true);
+  pedal.set("keyboard-a", 1, false);
+  pedal.clearSource("keyboard-b");
+
+  assert.deepEqual(changes, [
+    ["keyboard-a", 1, true, true],
+    ["keyboard-b", 1, true, true],
+    ["keyboard-a", 1, false, true],
+    ["keyboard-b", 1, false, false],
+  ]);
 });
 
 test("active notes remain lit until every source releases the same pitch", () => {
@@ -67,6 +96,24 @@ test("first active note forwards its MIDI velocity to the sound callback", () =>
   notes.noteOn(69, "keyboard-b", 1, 0.3);
 
   assert.deepEqual(changes, [[69, true, 0.72]]);
+});
+
+test("note callbacks retain source and channel for sustain handling", () => {
+  const noteOns = [];
+  const noteOffs = [];
+  const notes = createActiveNotes(
+    () => {},
+    {
+      onNoteOn: (...event) => noteOns.push(event),
+      onNoteOff: (...event) => noteOffs.push(event),
+    },
+  );
+
+  notes.noteOn(60, "keyboard-a", 3, 0.8);
+  notes.noteOff(60, "keyboard-a", 3);
+
+  assert.deepEqual(noteOns, [[60, "keyboard-a", 3, 0.8]]);
+  assert.deepEqual(noteOffs, [[60, "keyboard-a", 3]]);
 });
 
 test("clear deactivates every held pitch", () => {

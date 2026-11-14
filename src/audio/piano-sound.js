@@ -6,21 +6,41 @@ export function createPianoSound() {
   let loading = null;
   const heldNotes = new Map();
   const playingNotes = new Map();
+  const activePedals = new Set();
+  let nextVoiceId = 0;
 
-  function startHeldNote(midi, { velocity, pitchOffset }) {
-    if (!instrument || playingNotes.has(midi)) return;
+  function getNoteId(midi, source, channel) {
+    return JSON.stringify([midi, source, channel]);
+  }
 
-    const node = instrument.play(midi, audioContext.currentTime, {
-      gain: velocity,
+  function getPedalId(source, channel) {
+    return JSON.stringify([source, channel]);
+  }
+
+  function startNote(voiceId, note) {
+    if (!instrument || note.node) return;
+
+    note.node = instrument.play(note.midi, audioContext.currentTime, {
+      gain: note.velocity,
       release: 0.35,
-      cents: pitchOffset,
+      cents: note.pitchOffset,
     });
-    playingNotes.set(midi, node);
-    node.source.addEventListener("ended", () => {
-      if (playingNotes.get(midi) === node) {
-        playingNotes.delete(midi);
+    note.node.source.addEventListener("ended", () => {
+      if (playingNotes.get(voiceId) === note) {
+        playingNotes.delete(voiceId);
       }
     });
+    playingNotes.set(voiceId, note);
+  }
+
+  function releaseNote(voiceId, note) {
+    if (heldNotes.get(note.key) === note) {
+      heldNotes.delete(note.key);
+    }
+    playingNotes.delete(voiceId);
+    if (note.node) {
+      note.node.stop(audioContext.currentTime);
+    }
   }
 
   return {
@@ -45,8 +65,8 @@ export function createPianoSound() {
         .then(([, loadedInstrument]) => {
           instrument = loadedInstrument;
 
-          for (const [midi, note] of heldNotes) {
-            startHeldNote(midi, note);
+          for (const [voiceId, note] of playingNotes) {
+            startNote(voiceId, note);
           }
         })
         .catch((error) => {
@@ -57,34 +77,83 @@ export function createPianoSound() {
       return loading;
     },
 
-    noteOn(midi, velocity, pitchOffset) {
-      const note = { velocity, pitchOffset };
-      heldNotes.set(midi, note);
-      startHeldNote(midi, note);
+    noteOn(midi, velocity, pitchOffset, source, channel) {
+      const noteId = getNoteId(midi, source, channel);
+      if (heldNotes.has(noteId)) return;
+
+      const voiceId = nextVoiceId++;
+      const note = {
+        key: noteId,
+        voiceId,
+        midi,
+        source,
+        channel,
+        velocity,
+        pitchOffset,
+        node: null,
+        held: true,
+      };
+      heldNotes.set(noteId, note);
+      playingNotes.set(voiceId, note);
+      startNote(voiceId, note);
     },
 
     setPitchOffset(midi, pitchOffset) {
-      const note = heldNotes.get(midi);
-      if (!note) return;
-
-      note.pitchOffset = pitchOffset;
-      const playingNote = playingNotes.get(midi);
-      if (playingNote) {
-        const playbackRate = 2 ** (pitchOffset / 1200);
-        playingNote.source.playbackRate.setTargetAtTime(
-          playbackRate,
-          audioContext.currentTime,
-          0.02,
-        );
+      for (const note of playingNotes.values()) {
+        if (note.midi === midi) {
+          note.pitchOffset = pitchOffset;
+          note.node?.source.playbackRate.setTargetAtTime(
+            2 ** (pitchOffset / 1200),
+            audioContext.currentTime,
+            0.02,
+          );
+        }
       }
     },
 
-    noteOff(midi) {
-      heldNotes.delete(midi);
-      const node = playingNotes.get(midi);
-      if (node) {
-        node.stop(audioContext.currentTime);
-        playingNotes.delete(midi);
+    noteOff(midi, source, channel) {
+      const noteId = getNoteId(midi, source, channel);
+      const note = heldNotes.get(noteId);
+      if (!note) return;
+
+      heldNotes.delete(noteId);
+      note.held = false;
+      if (activePedals.has(getPedalId(source, channel))) {
+        note.sustained = true;
+      } else {
+        releaseNote(note.voiceId, note);
+      }
+    },
+
+    setSustain(source, channel, isDown) {
+      const pedalId = getPedalId(source, channel);
+      if (isDown) {
+        activePedals.add(pedalId);
+        return;
+      }
+
+      activePedals.delete(pedalId);
+      for (const [voiceId, note] of playingNotes) {
+        if (
+          note.source === source &&
+          note.channel === channel &&
+          !note.held
+        ) {
+          releaseNote(voiceId, note);
+        }
+      }
+    },
+
+    clearSource(source) {
+      for (const [voiceId, note] of playingNotes) {
+        if (note.source === source) {
+          releaseNote(voiceId, note);
+        }
+      }
+
+      for (const pedalId of activePedals) {
+        const [pedalSource] = JSON.parse(pedalId);
+        if (pedalSource === source) activePedals.delete(pedalId);
       }
     },
   };

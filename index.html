@@ -42,9 +42,21 @@
             <h2 id="piano-heading">88-key piano</h2>
             <p class="piano-hint">
               Click a key to cycle tuning: normal, +50 cents (blue), or -50 cents (amber).
+              A MIDI sustain pedal holds released notes until lifted.
             </p>
           </div>
-          <span class="piano-range">A0–C8</span>
+          <div class="piano-indicators">
+            <span
+              id="sustain-indicator"
+              class="sustain-indicator"
+              role="status"
+              aria-live="polite"
+              aria-label="Sustain pedal off"
+            >
+              Sustain off
+            </span>
+            <span class="piano-range">A0–C8</span>
+          </div>
         </div>
         <div class="piano-scroll">
           <div

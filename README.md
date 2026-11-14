@@ -14,9 +14,10 @@ midi-tuner/
 │   │   └── piano-sound.js  # Loads and plays sampled grand piano soundfont
 │   ├── midi/
 │   │   ├── active-notes.js # Tracks held notes and clears disconnected inputs
-│   │   ├── midi-client.js  # Enables WebMidi.js and listens for note events
+│   │   ├── midi-client.js  # Handles MIDI note, pedal, and device events
 │   │   ├── midi-utils.js   # Small MIDI utility functions
-│   │   └── pitch-offsets.js # Cycles per-key tuning offsets
+│   │   ├── pitch-offsets.js # Cycles per-key tuning offsets
+│   │   └── sustain-pedal.js # Tracks MIDI sustain pedal state
 │   └── ui/
 │       ├── device-list.js  # Renders detected MIDI input/output devices
 │       ├── piano.js        # Builds the 88-key piano and highlights held notes
@@ -86,15 +87,21 @@ reports whether MIDI and audio are ready or need to be retried.
 
 Connect a MIDI input and play or release notes to light up the matching keys on
 the 88-key A0–C8 piano and hear them through the computer's audio output.
-Incoming note velocity controls playback volume. A key and its sound stay
-active until the matching note-off arrives; disconnecting an input releases
-its held notes. MIDI access requires a supported browser and a secure context;
-`localhost` and `127.0.0.1` are suitable for local development. The app
-currently displays and plays incoming MIDI notes; it does not send MIDI output.
+Incoming note velocity controls playback volume. Piano key highlights follow
+the note-on/note-off state. A sustain pedal can keep a released note sounding;
+disconnecting an input releases its held and sustained notes. MIDI access
+requires a supported browser and a secure context; `localhost` and `127.0.0.1`
+are suitable for local development. The app currently displays and plays
+incoming MIDI notes; it does not send MIDI output.
 
 Click any piano key to cycle its tuning mode: normal, **+50 cents** (blue),
 then **−50 cents** (amber), then back to normal. The selected offset is applied
 to incoming notes at that pitch, including a note that is already sounding.
+
+A MIDI sustain/damper pedal sends controller **64**. While it is down, released
+notes continue sounding until the pedal is lifted. The piano panel shows
+whether sustain is active; disconnecting the MIDI input releases its sustained
+notes as well.
 
 ## Build process
 
