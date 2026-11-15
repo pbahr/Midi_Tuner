@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createActiveNotes } from "../src/midi/active-notes.js";
+import { createMidiOutputRouter } from "../src/midi/midi-output.js";
+import { getPitchBendForCents } from "../src/midi/midi-tuning.js";
 import { clampMidiValue } from "../src/midi/midi-utils.js";
 import { nextPitchOffset } from "../src/midi/pitch-offsets.js";
 import {
@@ -146,4 +148,137 @@ test("disconnecting an input releases its held notes only", () => {
   assert.deepEqual(changes.slice(-1), [[67, false]]);
   notes.noteOff(60, "keyboard-b", 1);
   assert.deepEqual(changes.slice(-1), [[60, false]]);
+});
+
+test("MIDI output forwards notes with their velocity and channel only when enabled", () => {
+  const sent = [];
+  const output = {
+    sendPitchBendRange: (...message) => sent.push(["range", ...message]),
+    sendPitchBend: (...message) => sent.push(["bend", ...message]),
+    sendNoteOn: (...message) => sent.push(["on", ...message]),
+    sendNoteOff: (...message) => sent.push(["off", ...message]),
+    sendControlChange: (...message) => sent.push(["control", ...message]),
+  };
+  const router = createMidiOutputRouter();
+
+  router.setOutput(output);
+  router.noteOn(60, 0.8, "keyboard-a", 3);
+  router.setEnabled(true);
+  router.noteOn(60, 0.8, "keyboard-a", 3);
+  router.noteOff(60, "keyboard-a", 3);
+
+  assert.deepEqual(sent, [
+    ["range", 1, 0, { channels: 3 }],
+    ["bend", 0, { channels: 3 }],
+    ["on", 60, { channels: 3, attack: 0.8 }],
+    ["off", 60, { channels: 3 }],
+    ["bend", 0, { channels: 3 }],
+  ]);
+});
+
+test("disabling MIDI output releases held notes, sustain, and pitch bend", () => {
+  const sent = [];
+  const output = {
+    sendPitchBendRange: (...message) => sent.push(["range", ...message]),
+    sendPitchBend: (...message) => sent.push(["bend", ...message]),
+    sendNoteOn: (...message) => sent.push(["on", ...message]),
+    sendNoteOff: (...message) => sent.push(["off", ...message]),
+    sendControlChange: (...message) => sent.push(["control", ...message]),
+  };
+  const router = createMidiOutputRouter();
+
+  router.setOutput(output);
+  router.setEnabled(true);
+  router.noteOn(64, 0.5, "keyboard-a", 2);
+  router.sustainChange("keyboard-a", 2, true);
+  router.setEnabled(false);
+
+  assert.deepEqual(sent, [
+    ["range", 1, 0, { channels: 2 }],
+    ["bend", 0, { channels: 2 }],
+    ["on", 64, { channels: 2, attack: 0.5 }],
+    ["control", 64, 127, { channels: 2 }],
+    ["off", 64, { channels: 2 }],
+    ["control", 64, 0, { channels: 2 }],
+    ["bend", 0, { channels: 2 }],
+  ]);
+});
+
+test("MIDI output sustain is aggregated across inputs on the same channel", () => {
+  const sent = [];
+  const output = {
+    sendPitchBendRange: () => {},
+    sendPitchBend: () => {},
+    sendNoteOn: (...message) => sent.push(["on", ...message]),
+    sendNoteOff: (...message) => sent.push(["off", ...message]),
+    sendControlChange: (...message) => sent.push(["control", ...message]),
+  };
+  const router = createMidiOutputRouter();
+
+  router.setOutput(output);
+  router.setEnabled(true);
+  router.sustainChange("keyboard-a", 1, true);
+  router.sustainChange("keyboard-b", 1, true);
+  router.sustainChange("keyboard-a", 1, false);
+  router.sustainChange("keyboard-b", 1, false);
+
+  assert.deepEqual(sent, [
+    ["control", 64, 127, { channels: 1 }],
+    ["control", 64, 0, { channels: 1 }],
+  ]);
+});
+
+test("pitch bend encodes -50, zero, and +50 cents for a one-semitone range", () => {
+  assert.equal(getPitchBendForCents(-50), -0.5);
+  assert.equal(getPitchBendForCents(0), 0);
+  assert.equal(getPitchBendForCents(50), 0.5);
+});
+
+test("MIDI output sends the tuning bend before forwarded notes", () => {
+  const sent = [];
+  const output = {
+    sendPitchBendRange: (...message) => sent.push(["range", ...message]),
+    sendPitchBend: (...message) => sent.push(["bend", ...message]),
+    sendNoteOn: (...message) => sent.push(["on", ...message]),
+    sendNoteOff: (...message) => sent.push(["off", ...message]),
+    sendControlChange: (...message) => sent.push(["control", ...message]),
+  };
+  const router = createMidiOutputRouter();
+
+  router.setPitchOffset(60, 50);
+  router.setOutput(output);
+  router.setEnabled(true);
+  router.noteOn(60, 0.8, "keyboard-a", 3);
+
+  assert.deepEqual(sent, [
+    ["range", 1, 0, { channels: 3 }],
+    ["bend", 0.5, { channels: 3 }],
+    ["on", 60, { channels: 3, attack: 0.8 }],
+  ]);
+});
+
+test("changing tuning of a held note updates bend and note-off resets it", () => {
+  const sent = [];
+  const output = {
+    sendPitchBendRange: () => {},
+    sendPitchBend: (...message) => sent.push(["bend", ...message]),
+    sendNoteOn: (...message) => sent.push(["on", ...message]),
+    sendNoteOff: (...message) => sent.push(["off", ...message]),
+    sendControlChange: () => {},
+  };
+  const router = createMidiOutputRouter();
+
+  router.setOutput(output);
+  router.setEnabled(true);
+  router.noteOn(60, 0.7, "keyboard-a", 1);
+  router.setPitchOffset(60, 50);
+  router.noteOff(60, "keyboard-a", 1);
+
+  assert.deepEqual(sent, [
+    ["bend", 0, { channels: 1 }],
+    ["on", 60, { channels: 1, attack: 0.7 }],
+    ["bend", 0.5, { channels: 1 }],
+    ["off", 60, { channels: 1 }],
+    ["bend", 0, { channels: 1 }],
+  ]);
 });

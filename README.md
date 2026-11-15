@@ -15,6 +15,8 @@ midi-tuner/
 │   ├── midi/
 │   │   ├── active-notes.js # Tracks held notes and clears disconnected inputs
 │   │   ├── midi-client.js  # Handles MIDI note, pedal, and device events
+│   │   ├── midi-output.js  # Routes incoming notes and sustain to selected output
+│   │   ├── midi-tuning.js  # Converts cents offsets to pitch-bend values
 │   │   ├── midi-utils.js   # Small MIDI utility functions
 │   │   ├── pitch-offsets.js # Cycles per-key tuning offsets
 │   │   └── sustain-pedal.js # Tracks MIDI sustain pedal state
@@ -91,12 +93,27 @@ Incoming note velocity controls playback volume. Piano key highlights follow
 the note-on/note-off state. A sustain pedal can keep a released note sounding;
 disconnecting an input releases its held and sustained notes. MIDI access
 requires a supported browser and a secure context; `localhost` and `127.0.0.1`
-are suitable for local development. The app currently displays and plays
-incoming MIDI notes; it does not send MIDI output.
+are suitable for local development.
+
+To send incoming notes to a MIDI instrument, choose an output in the **MIDI
+output** selector and enable **Send incoming notes to the selected output**.
+This MIDI-thru option is off by default. It forwards note-on, note-off, velocity,
+channel, and sustain-pedal messages. Turning it off or changing outputs sends
+note-offs, releases sustain, and resets pitch bend on the previous output to
+avoid stuck notes.
 
 Click any piano key to cycle its tuning mode: normal, **+50 cents** (blue),
 then **−50 cents** (amber), then back to normal. The selected offset is applied
 to incoming notes at that pitch, including a note that is already sounding.
+When MIDI thru is enabled, the app sends MIDI pitch bend on the note's incoming
+channel, setting that channel's pitch-bend range to ±1 semitone as needed. This
+uses standard MIDI messages and does not require SysEx permission. The receiving
+instrument must support pitch bend.
+
+Pitch bend applies to an entire MIDI channel, not an individual note. If
+simultaneous notes on the same channel have different tuning offsets, they share
+the latest bend and cannot be tuned independently. Notes arriving on separate
+channels can be tuned independently.
 
 A MIDI sustain/damper pedal sends controller **64**. While it is down, released
 notes continue sounding until the pedal is lifted. The piano panel shows

@@ -34,6 +34,23 @@
             </ul>
           </div>
         </div>
+        <div class="midi-output-controls">
+          <label class="midi-output-select-label" for="midi-output">
+            MIDI output
+            <select id="midi-output" disabled>
+              <option value="">Enable MIDI to choose an output</option>
+            </select>
+          </label>
+          <label class="midi-thru-toggle">
+            <input id="midi-thru" type="checkbox" disabled />
+            Send incoming notes to the selected output
+          </label>
+        </div>
+        <p class="midi-output-hint">
+          Tuned notes use MIDI pitch bend on their incoming channel. Notes on
+          the same channel share a bend, so simultaneous notes with different
+          tuning offsets may not sound independently tuned.
+        </p>
       </section>
 
       <section class="panel piano-panel" aria-labelledby="piano-heading">
