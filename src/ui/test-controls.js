@@ -2,6 +2,7 @@ export function setupTestControls({
   onEnableMidi,
   onMidiOutputChange,
   onMidiOutputToggle,
+  onRecordToggle,
 }) {
   document
     .querySelector("#enable-midi")
@@ -12,4 +13,7 @@ export function setupTestControls({
   document
     .querySelector("#midi-thru")
     .addEventListener("change", onMidiOutputToggle);
+  document
+    .querySelector("#record-midi")
+    .addEventListener("click", onRecordToggle);
 }

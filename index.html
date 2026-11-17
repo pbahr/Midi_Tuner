@@ -51,6 +51,24 @@
           the same channel share a bend, so simultaneous notes with different
           tuning offsets may not sound independently tuned.
         </p>
+        <div class="midi-recording-controls">
+          <div class="midi-recording-buttons">
+            <button id="record-midi" type="button" disabled>Start recording</button>
+            <a
+              id="download-midi"
+              class="midi-download-link is-disabled"
+              aria-disabled="true"
+              tabindex="-1"
+            >Download .mid</a>
+          </div>
+          <p id="recording-status" class="recording-status" role="status">
+            Enable MIDI before recording.
+          </p>
+        </div>
+        <p class="midi-recording-hint">
+          Recording captures incoming MIDI notes; it does not record piano audio.
+          Starting a new take replaces the previous recording.
+        </p>
       </section>
 
       <section class="panel piano-panel" aria-labelledby="piano-heading">

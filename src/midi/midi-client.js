@@ -4,6 +4,10 @@ import {
   SUSTAIN_PEDAL_CONTROLLER,
 } from "./sustain-pedal.js";
 
+export function getMidiEventChannel(event) {
+  return event.message.channel;
+}
+
 export async function enableMidi({
   onNoteOn,
   onNoteOff,
@@ -17,7 +21,7 @@ export async function enableMidi({
       callback({
         noteNumber: event.note.number,
         source: input.id,
-        channel: event.channel,
+        channel: getMidiEventChannel(event),
         velocity: event.velocity,
       });
     };
@@ -29,7 +33,7 @@ export async function enableMidi({
 
       onSustainChange({
         source: input.id,
-        channel: event.channel,
+        channel: getMidiEventChannel(event),
         isDown: isSustainPedalDown(event.rawValue),
       });
     });

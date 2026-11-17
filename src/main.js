@@ -2,6 +2,7 @@ import "./styles.css";
 import { createPianoSound } from "./audio/piano-sound.js";
 import { enableMidi } from "./midi/midi-client.js";
 import { createMidiOutputRouter } from "./midi/midi-output.js";
+import { createMidiRecorder } from "./midi/midi-recorder.js";
 import { renderDevices, renderMidiOutputOptions } from "./ui/device-list.js";
 import { createPiano } from "./ui/piano.js";
 import { setupTestControls } from "./ui/test-controls.js";
@@ -13,30 +14,39 @@ const outputDevices = document.querySelector("#output-devices");
 const midiOutputSelect = document.querySelector("#midi-output");
 const midiThruToggle = document.querySelector("#midi-thru");
 const enableButton = document.querySelector("#enable-midi");
+const recordButton = document.querySelector("#record-midi");
+const downloadButton = document.querySelector("#download-midi");
+const recordingStatus = document.querySelector("#recording-status");
 const pianoSound = createPianoSound();
 const midiOutput = createMidiOutputRouter();
+const midiRecorder = createMidiRecorder();
+let midiDownloadUrl = null;
 const piano = createPiano(document.querySelector("#piano-keyboard"), {
   onNoteOn: (noteNumber, velocity, pitchOffset, source, channel) => {
     pianoSound.noteOn(noteNumber, velocity, pitchOffset, source, channel);
     runMidiOutputAction(() =>
       midiOutput.noteOn(noteNumber, velocity, source, channel),
     );
+    midiRecorder.noteOn(noteNumber, velocity, source, channel);
   },
   onNoteOff: (noteNumber, source, channel) => {
     pianoSound.noteOff(noteNumber, source, channel);
     runMidiOutputAction(() => midiOutput.noteOff(noteNumber, source, channel));
+    midiRecorder.noteOff(noteNumber, source, channel);
   },
   onPitchOffsetChange: (noteNumber, pitchOffset) => {
     pianoSound.setPitchOffset(noteNumber, pitchOffset);
     runMidiOutputAction(() =>
       midiOutput.setPitchOffset(noteNumber, pitchOffset),
     );
+    midiRecorder.setPitchOffset(noteNumber, pitchOffset);
   },
   onSustainChange: (source, channel, isDown, anyPedalDown) => {
     pianoSound.setSustain(source, channel, isDown);
     runMidiOutputAction(() =>
       midiOutput.sustainChange(source, channel, isDown),
     );
+    midiRecorder.sustainChange(source, channel, isDown);
     sustainIndicator.textContent = anyPedalDown ? "Sustain on" : "Sustain off";
     sustainIndicator.classList.toggle("is-active", anyPedalDown);
     sustainIndicator.setAttribute("aria-label", `Sustain pedal ${anyPedalDown ? "on" : "off"}`);
@@ -67,6 +77,34 @@ function runMidiOutputAction(action) {
   }
 }
 
+function clearMidiDownload() {
+  if (midiDownloadUrl) {
+    URL.revokeObjectURL(midiDownloadUrl);
+    midiDownloadUrl = null;
+  }
+  downloadButton.removeAttribute("href");
+  downloadButton.classList.add("is-disabled");
+  downloadButton.setAttribute("aria-disabled", "true");
+  downloadButton.tabIndex = -1;
+}
+
+function prepareMidiDownload() {
+  try {
+    const midiFile = midiRecorder.getMidiFile();
+    const blob = new Blob([midiFile], { type: "audio/midi" });
+    midiDownloadUrl = URL.createObjectURL(blob);
+    downloadButton.href = midiDownloadUrl;
+    downloadButton.download = "midi-tuner-recording.mid";
+    downloadButton.classList.remove("is-disabled");
+    downloadButton.setAttribute("aria-disabled", "false");
+    downloadButton.removeAttribute("tabindex");
+    recordingStatus.textContent = "Recording stopped. Select Download .mid to save your file.";
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    recordingStatus.textContent = `Could not prepare MIDI file: ${message}`;
+  }
+}
+
 setupTestControls({
   onEnableMidi: async () => {
     enableButton.disabled = true;
@@ -93,6 +131,7 @@ setupTestControls({
       renderDevices(outputDevices, midiDevices.outputs);
       renderMidiOutputOptions(midiOutputSelect, midiDevices.outputs);
       midiThruToggle.disabled = midiDevices.outputs.length === 0;
+      recordButton.disabled = false;
     }
 
     if (midiResult.status === "fulfilled" && audioResult.status === "fulfilled") {
@@ -150,5 +189,24 @@ setupTestControls({
         ? `MIDI thru enabled for ${midiOutput.getOutput().name}.`
         : "MIDI thru disabled.";
     }
+  },
+  onRecordToggle: () => {
+    if (midiRecorder.isRecording()) {
+      midiRecorder.stop();
+      recordButton.textContent = "Start recording";
+      if (midiRecorder.hasRecording()) {
+        prepareMidiDownload();
+      } else {
+        clearMidiDownload();
+        recordingStatus.textContent =
+          "No MIDI events were captured. Connect a MIDI input and play notes while recording.";
+      }
+      return;
+    }
+
+    clearMidiDownload();
+    midiRecorder.start();
+    recordButton.textContent = "Stop recording";
+    recordingStatus.textContent = "Recording MIDI input, sustain, and tuning.";
   },
 });

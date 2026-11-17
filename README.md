@@ -17,6 +17,7 @@ midi-tuner/
 │   │   ├── midi-client.js  # Handles MIDI note, pedal, and device events
 │   │   ├── midi-output.js  # Routes incoming notes and sustain to selected output
 │   │   ├── midi-tuning.js  # Converts cents offsets to pitch-bend values
+│   │   ├── midi-recorder.js # Records and encodes MIDI Standard MIDI Files
 │   │   ├── midi-utils.js   # Small MIDI utility functions
 │   │   ├── pitch-offsets.js # Cycles per-key tuning offsets
 │   │   └── sustain-pedal.js # Tracks MIDI sustain pedal state
@@ -115,10 +116,51 @@ simultaneous notes on the same channel have different tuning offsets, they share
 the latest bend and cannot be tuned independently. Notes arriving on separate
 channels can be tuned independently.
 
+Use **Start recording** to capture incoming notes, velocity, sustain-pedal
+changes, and the pitch-bend events for the selected per-key tuning. Press
+**Stop recording** to close any notes that are still held, then choose
+**Download .mid** to save `midi-tuner-recording.mid`. Starting a new recording
+replaces the previous take. Notes and pedals already held when recording starts
+are included. The exported Standard MIDI File includes pitch-bend range setup
+events so that the recorded ±50-cent bends play back as intended; the recording
+captures MIDI events, not the computer's piano audio.
+
 A MIDI sustain/damper pedal sends controller **64**. While it is down, released
 notes continue sounding until the pedal is lifted. The piano panel shows
 whether sustain is active; disconnecting the MIDI input releases its sustained
 notes as well.
+
+## Design decisions
+
+- **Browser-based JavaScript app:** Vite serves and builds a small client-side
+  app. WebMidi.js handles browser MIDI access, while the Web Audio soundfont
+  plays a local preview without requiring a connected instrument.
+- **88-key piano UI:** The interface covers the standard A0–C8 range. Incoming
+  MIDI lights the matching key; clicking a key cycles its tuning through
+  normal, +50 cents, and −50 cents.
+- **Pitch tuning uses pitch bend:** The current MIDI 1.0 output and recording
+  use channel pitch bend with a ±1-semitone range. This is broadly compatible,
+  but pitch bend is channel-wide, so notes sharing a channel cannot have
+  independent tuning.
+- **MIDI thru is opt-in:** Incoming notes and sustain are sent to the selected
+  output only when the user enables MIDI thru. Disabling it or changing outputs
+  releases held notes and sustain and resets bend to avoid stuck state.
+- **Sustain follows MIDI CC64:** Pedal state is tracked per input and channel;
+  overlapping pedal sources on a channel are aggregated so one source cannot
+  release another source's pedal.
+- **Recording captures MIDI events, not audio:** The app exports a Standard
+  MIDI File with notes, sustain, and tuning events. Held notes and pedals are
+  included when recording starts, and notes still held at stop are closed in
+  the take.
+- **MIDI 2.0 per-note tuning is an experimental direction, not implemented:**
+  The current browser Web MIDI API and WebMidi.js integration expose MIDI
+  messages as MIDI 1.0 byte sequences; they do not provide a UMP/MIDI 2.0
+  transport in this app. Therefore the current `.mid` download cannot carry
+  MIDI 2.0 per-note pitch messages. A true MIDI 2.0 implementation would need
+  a UMP-capable transport and compatible destination software or hardware.
+  Until that transport exists, using MPE (separate MIDI 1.0 channels per
+  active note) is a possible compatibility-oriented alternative, but it is
+  not MIDI 2.0 and requires an MPE-capable destination.
 
 ## Build process
 
